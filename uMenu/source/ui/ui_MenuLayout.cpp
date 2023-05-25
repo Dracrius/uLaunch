@@ -434,7 +434,7 @@ namespace ui {
                                 this->items_menu->SetItemMultiselected(this->items_menu->GetSelectedItem(), true);
                             }
                         }
-                        else if(keys_down & HidNpadButton_AnyUp) {
+                        else if(keys_down & HidNpadButton_Minus) {
                             if(title.title_type == cfg::TitleType::Installed) {
                                 const auto option = g_MenuApplication->CreateShowDialog(GetLanguageString("app_launch"), GetLanguageString("app_take_over_select") + "\n" + GetLanguageString("app_take_over_selected"), { "Yes", "Cancel" }, true);
                                 if(option == 0) {
@@ -764,7 +764,7 @@ namespace ui {
         else if(keys_down & HidNpadButton_Plus) {
             actions::ShowAboutDialog();
         }
-        else if(keys_down & HidNpadButton_Minus) {
+        else if((keys_down & HidNpadButton_L) || (keys_down & HidNpadButton_R) || (keys_down & HidNpadButton_Up) || (keys_down & HidNpadButton_Down)) {
             this->menuToggle_Click();
         }else if(keys_down & HidNpadButton_AnyLeft || keys_down & HidNpadButton_AnyRight){
             pu::audio::PlaySfx(this->title_select_sfx); //If i am moving to left or right i want to play the sfx
