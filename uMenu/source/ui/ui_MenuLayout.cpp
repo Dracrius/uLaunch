@@ -759,9 +759,6 @@ namespace ui {
                 this->MoveFolder("", true);
             }
         }
-        else if(keys_down & HidNpadButton_Plus) {
-            actions::ShowAboutDialog();
-        }
         else if((keys_down & HidNpadButton_L) || (keys_down & HidNpadButton_R) || (keys_down & HidNpadButton_Up) || (keys_down & HidNpadButton_Down)) {
             this->menuToggle_Click();
         }
