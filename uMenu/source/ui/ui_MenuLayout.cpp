@@ -477,7 +477,7 @@ namespace ui {
         this->logo_img->SetWidth(60);
         this->logo_img->SetHeight(60);
         this->logo_img->SetOnClick(&actions::ShowAboutDialog);
-        g_MenuApplication->ApplyConfigForElement("main_menu", "logo_icon", this->logo_img, false); // Sorry theme makers... uLaunch's logo must be visible, but can be moved
+        g_MenuApplication->ApplyConfigForElement("main_menu", "logo_icon", this->logo_img); // Sorry theme makers... uLaunch's logo must be visible, but can be moved... (ehem you do realize that means they all just move it off screen? So lets just keep things consistant)
         this->Add(this->logo_img);
 
         this->connection_icon = pu::ui::elm::Image::New(80, 53, cfg::GetAssetByTheme(g_Theme, "ui/NoConnectionIcon.png"));
@@ -565,7 +565,6 @@ namespace ui {
 
         this->title_launch_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/TitleLaunch.wav"));
         this->menu_toggle_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/MenuToggle.wav"));
-        this->title_select_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/TitleSelect.wav"));
 
         this->SetBackgroundImage(cfg::GetAssetByTheme(g_Theme, "ui/Background.png"));
     }
@@ -573,7 +572,6 @@ namespace ui {
     MenuLayout::~MenuLayout() {
         pu::audio::DestroySfx(this->title_launch_sfx);
         pu::audio::DestroySfx(this->menu_toggle_sfx);
-        pu::audio::DestroySfx(this->title_select_sfx);
     }
 
     void MenuLayout::menu_OnSelected(const u32 idx) {
@@ -766,8 +764,6 @@ namespace ui {
         }
         else if((keys_down & HidNpadButton_L) || (keys_down & HidNpadButton_R) || (keys_down & HidNpadButton_Up) || (keys_down & HidNpadButton_Down)) {
             this->menuToggle_Click();
-        }else if(keys_down & HidNpadButton_AnyLeft || keys_down & HidNpadButton_AnyRight){
-            pu::audio::PlaySfx(this->title_select_sfx); //If i am moving to left or right i want to play the sfx
         }
     }
 

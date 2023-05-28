@@ -74,12 +74,14 @@ namespace ui {
         this->suspended_icon = pu::ui::render::LoadImage(suspended_img_path);
         this->multiselect_icon = pu::ui::render::LoadImage(multiselect_img_path);
         this->SetY(y);
+        this->title_select_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/TitleSelect.wav"));
     }
 
     SideMenu::~SideMenu() {
         pu::ui::render::DeleteTexture(this->cursor_icon);
         pu::ui::render::DeleteTexture(this->suspended_icon);
         this->ClearItems();
+        pu::audio::DestroySfx(this->title_select_sfx);
     }
 
     void SideMenu::OnRender(pu::ui::render::Renderer::Ref &drawer, const s32 x, const s32 y) {
@@ -291,6 +293,7 @@ namespace ui {
             
             this->DoOnSelectionChanged();
         }
+        pu::audio::PlaySfx(this->title_select_sfx); //If i am moving to left or right i want to play the sfx
     }
 
     void SideMenu::HandleMoveRight() {
@@ -314,6 +317,7 @@ namespace ui {
             
             this->DoOnSelectionChanged();
         }
+        pu::audio::PlaySfx(this->title_select_sfx); //If i am moving to left or right i want to play the sfx
     }
 
     void SideMenu::UpdateBorderIcons() {
