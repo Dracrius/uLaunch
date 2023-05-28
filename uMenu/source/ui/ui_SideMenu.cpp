@@ -284,6 +284,13 @@ namespace ui {
 
             this->DoOnSelectionChanged();
         }
+        else {
+            this->prev_selected_item_idx = this->selected_item_idx;
+            this->selected_item_idx = this->items_icon_paths.size();
+            this->move_alpha = 0xFF;
+            
+            this->DoOnSelectionChanged();
+        }
     }
 
     void SideMenu::HandleMoveRight() {
@@ -298,6 +305,13 @@ namespace ui {
                 this->move_alpha = 0xFF;
             }
 
+            this->DoOnSelectionChanged();
+        }
+        else {
+            prev_selected_item_idx = selected_item_idx;
+            selected_item_idx = 0;
+            this->move_alpha = 0xFF;
+            
             this->DoOnSelectionChanged();
         }
     }
