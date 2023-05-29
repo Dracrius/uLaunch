@@ -1,75 +1,29 @@
 #include <ui/ui_SideMenu.hpp>
+#include <cfg/cfg_Config.hpp>
+
+extern cfg::Config g_Config;
+extern cfg::Theme g_Theme;
 
 namespace ui {
 
-    bool SideMenu::IsLeftFirst() {
-        auto base_x = GetProcessedX();
-        constexpr auto first_item_x = BaseX;
-        for(u32 i = 0; i < this->rendered_icons.size(); i++) {
-            if((base_x == first_item_x) && (this->selected_item_idx == (this->base_icon_idx + i))) {
-                return true;
-            }
-            base_x += ItemSize + Margin;
-        }
-
-        return false;
-    }
-    
-    bool SideMenu::IsRightLast() {
-        if(this->selected_item_idx == (this->items_icon_paths.size() - 1)) {
-            return true;
-        }
-
-        auto base_x = GetProcessedX();
-        constexpr auto last_item_x = BaseX + (Margin + ItemSize) * (ItemCount - 1);
-        for(u32 i = 0; i < this->rendered_icons.size(); i++) {
-            if((base_x == last_item_x) && (this->selected_item_idx == (this->base_icon_idx + i))) {
-                return true;
-            }
-            base_x += ItemSize + Margin;
-        }
-
-        return false;
-    }
-
-    void SideMenu::MoveReloadIcons(const bool moving_right) {
-        if(moving_right) {
-            auto icon_tex = pu::ui::render::LoadImage(this->items_icon_paths.at(this->selected_item_idx));
-            this->rendered_icons.push_back(icon_tex);
-            
-            auto text_tex = pu::ui::render::RenderText(this->text_font, this->items_icon_texts.at(this->selected_item_idx), this->text_clr);
-            this->rendered_texts.push_back(text_tex);
-
-            if(this->rendered_icons.size() > ItemCount) {
-                pu::ui::render::DeleteTexture(this->rendered_icons.front());
-                this->rendered_icons.erase(this->rendered_icons.begin());
-                pu::ui::render::DeleteTexture(this->rendered_texts.front());
-                this->rendered_texts.erase(this->rendered_texts.begin());
-                this->base_icon_idx++;
-            }
-        }
-        else {
-            auto icon_tex = pu::ui::render::LoadImage(this->items_icon_paths.at(this->selected_item_idx));
-            this->rendered_icons.insert(this->rendered_icons.begin(), icon_tex);
-            const auto text = this->items_icon_texts.at(this->selected_item_idx);
-            pu::sdl2::Texture text_tex = nullptr;
-            if(!text.empty()) {
-                text_tex = pu::ui::render::RenderText(this->text_font, text, this->text_clr);
-            }
-            this->rendered_texts.insert(this->rendered_texts.begin(), text_tex);
-
-            this->base_icon_idx--;
-            if(this->rendered_icons.size() > ItemCount) {
-                pu::ui::render::DeleteTexture(this->rendered_icons.back());
-                this->rendered_icons.pop_back();
-                pu::ui::render::DeleteTexture(this->rendered_texts.back());
-                this->rendered_texts.pop_back();
-            }
-        }
-        this->UpdateBorderIcons();
-    }
-
-    SideMenu::SideMenu(const pu::ui::Color suspended_clr, const std::string &cursor_path, const std::string &suspended_img_path, const std::string &multiselect_img_path, const s32 txt_x, const s32 txt_y, const std::string &font_name, const pu::ui::Color txt_clr, const s32 y) : selected_item_idx(0), suspended_item_idx(-1), base_icon_idx(0), move_alpha(0), text_x(txt_x), text_y(txt_y), enabled(true), text_clr(txt_clr), on_select_cb(), on_selection_changed_cb(), left_border_icon(nullptr), right_border_icon(nullptr), text_font(font_name), scroll_flag(0), scroll_tp_value(50), scroll_count(0) {
+    SideMenu::SideMenu(const pu::ui::Color suspended_clr, const std::string &cursor_path, const std::string &suspended_img_path, const std::string &multiselect_img_path, const s32 txt_x, const s32 txt_y, const std::string &font_name, const pu::ui::Color txt_clr, const s32 y) : 
+        selected_item_idx(0), 
+        suspended_item_idx(-1), 
+        base_icon_idx(0), 
+        move_alpha(0), 
+        text_x(txt_x), 
+        text_y(txt_y), 
+        enabled(true), 
+        text_clr(txt_clr), 
+        on_select_cb(), 
+        on_selection_changed_cb(), 
+        left_border_icon(nullptr), 
+        right_border_icon(nullptr), 
+        text_font(font_name), 
+        scroll_flag(0), 
+        scroll_tp_value(50), 
+        scroll_count(0) 
+    {
         this->cursor_icon = pu::ui::render::LoadImage(cursor_path);
         this->suspended_icon = pu::ui::render::LoadImage(suspended_img_path);
         this->multiselect_icon = pu::ui::render::LoadImage(multiselect_img_path);
@@ -77,14 +31,16 @@ namespace ui {
         this->title_select_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/TitleSelect.wav"));
     }
 
-    SideMenu::~SideMenu() {
+    SideMenu::~SideMenu() 
+    {
         pu::ui::render::DeleteTexture(this->cursor_icon);
         pu::ui::render::DeleteTexture(this->suspended_icon);
         this->ClearItems();
         pu::audio::DestroySfx(this->title_select_sfx);
     }
 
-    void SideMenu::OnRender(pu::ui::render::Renderer::Ref &drawer, const s32 x, const s32 y) {
+    void SideMenu::OnRender(pu::ui::render::Renderer::Ref &drawer, const s32 x, const s32 y) 
+    {
         if(this->items_icon_paths.empty()) {
             return;
         }
@@ -151,7 +107,8 @@ namespace ui {
         }
     }
 
-    void SideMenu::OnInput(const u64 keys_down, const u64 keys_up, const u64 keys_held, const pu::ui::TouchPoint touch_pos) {
+    void SideMenu::OnInput(const u64 keys_down, const u64 keys_up, const u64 keys_held, const pu::ui::TouchPoint touch_pos) 
+    {
         if(this->rendered_icons.empty()) {
             return;
         }
@@ -254,25 +211,8 @@ namespace ui {
         }
     }
 
-    void SideMenu::ClearItems() {
-        this->ClearRenderedItems();
-
-        this->items_icon_paths.clear();
-        this->items_icon_texts.clear();
-        this->items_multiselected.clear();
-
-        this->selected_item_idx = 0;
-        this->base_icon_idx = 0;
-        this->suspended_item_idx = -1;
-    }
-
-    void SideMenu::AddItem(const std::string &icon, const std::string &txt) {
-        this->items_icon_paths.push_back(icon);
-        this->items_icon_texts.push_back(txt);
-        this->items_multiselected.push_back(false);
-    }
-
-    void SideMenu::HandleMoveLeft() {
+    void SideMenu::HandleMoveLeft() 
+    {
         if(this->selected_item_idx > 0) {
             const auto is_left_first = IsLeftFirst();
             this->prev_selected_item_idx = this->selected_item_idx;
@@ -289,14 +229,16 @@ namespace ui {
         else {
             this->prev_selected_item_idx = this->selected_item_idx;
             this->selected_item_idx = this->items_icon_paths.size();
+            this->rendered_icons.clear();
             this->move_alpha = 0xFF;
-            
+            this->UpdateBorderIcons();
             this->DoOnSelectionChanged();
         }
         pu::audio::PlaySfx(this->title_select_sfx); //If i am moving to left or right i want to play the sfx
     }
 
-    void SideMenu::HandleMoveRight() {
+    void SideMenu::HandleMoveRight() 
+    {
         if((selected_item_idx + 1) < this->items_icon_paths.size()) {
             const auto is_right_last = IsRightLast();
             prev_selected_item_idx = selected_item_idx;
@@ -313,14 +255,95 @@ namespace ui {
         else {
             prev_selected_item_idx = selected_item_idx;
             selected_item_idx = 0;
+            this->rendered_icons.clear();
             this->move_alpha = 0xFF;
-            
+            this->UpdateBorderIcons();
             this->DoOnSelectionChanged();
         }
         pu::audio::PlaySfx(this->title_select_sfx); //If i am moving to left or right i want to play the sfx
     }
 
-    void SideMenu::UpdateBorderIcons() {
+    //Check if next to the left is the First Icon
+    bool SideMenu::IsLeftFirst() 
+    {
+        auto base_x = GetProcessedX();
+        constexpr auto first_item_x = BaseX;
+        for(u32 i = 0; i < this->rendered_icons.size(); i++) {
+            if((base_x == first_item_x) && (this->selected_item_idx == (this->base_icon_idx + i))) {
+                return true;
+            }
+            base_x += ItemSize + Margin;
+        }
+
+        return false;
+    }
+    
+    //Check if next to the right is the Last Icon
+    bool SideMenu::IsRightLast() 
+    {
+        if(this->selected_item_idx == (this->items_icon_paths.size() - 1)) {
+            return true;
+        }
+
+        auto base_x = GetProcessedX();
+        constexpr auto last_item_x = BaseX + (Margin + ItemSize) * (ItemCount - 1);
+        for(u32 i = 0; i < this->rendered_icons.size(); i++) {
+            if((base_x == last_item_x) && (this->selected_item_idx == (this->base_icon_idx + i))) {
+                return true;
+            }
+            base_x += ItemSize + Margin;
+        }
+
+        return false;
+    }
+
+    void SideMenu::MoveReloadIcons(const bool moving_right) 
+    {
+        if(moving_right) { //Moving Right
+            auto icon_tex = pu::ui::render::LoadImage(this->items_icon_paths.at(this->selected_item_idx));
+            this->rendered_icons.push_back(icon_tex);
+            
+            auto text_tex = pu::ui::render::RenderText(this->text_font, this->items_icon_texts.at(this->selected_item_idx), this->text_clr);
+            this->rendered_texts.push_back(text_tex);
+
+            if(this->rendered_icons.size() > ItemCount) {
+                pu::ui::render::DeleteTexture(this->rendered_icons.front());
+                this->rendered_icons.erase(this->rendered_icons.begin());
+                pu::ui::render::DeleteTexture(this->rendered_texts.front());
+                this->rendered_texts.erase(this->rendered_texts.begin());
+                this->base_icon_idx++;
+                if (this->base_icon_idx > this->items_icon_paths.size()) {
+                    this->base_icon_idx = 0;
+                }
+            }
+        }
+        else { //Moving Left
+            auto icon_tex = pu::ui::render::LoadImage(this->items_icon_paths.at(this->selected_item_idx));
+            this->rendered_icons.insert(this->rendered_icons.begin(), icon_tex);
+
+            const auto text = this->items_icon_texts.at(this->selected_item_idx);
+            pu::sdl2::Texture text_tex = nullptr;
+            if(!text.empty()) {
+                text_tex = pu::ui::render::RenderText(this->text_font, text, this->text_clr);
+            }
+            this->rendered_texts.insert(this->rendered_texts.begin(), text_tex);
+
+            this->base_icon_idx--;
+            if (this->base_icon_idx < 0) {
+                this->base_icon_idx = this->items_icon_paths.size();
+            }
+            if(this->rendered_icons.size() > ItemCount) {
+                pu::ui::render::DeleteTexture(this->rendered_icons.back());
+                this->rendered_icons.pop_back();
+                pu::ui::render::DeleteTexture(this->rendered_texts.back());
+                this->rendered_texts.pop_back();
+            }
+        }
+        this->UpdateBorderIcons();
+    }
+
+    void SideMenu::UpdateBorderIcons() 
+    {
         this->ClearBorderIcons();
 
         if(this->base_icon_idx > 0) {
@@ -331,20 +354,43 @@ namespace ui {
         }
     }
 
-    void SideMenu::ResetMultiselections() {
+    void SideMenu::ClearItems() 
+    {
+        this->ClearRenderedItems();
+
+        this->items_icon_paths.clear();
+        this->items_icon_texts.clear();
+        this->items_multiselected.clear();
+
+        this->selected_item_idx = 0;
+        this->base_icon_idx = 0;
+        this->suspended_item_idx = -1;
+    }
+
+    void SideMenu::AddItem(const std::string &icon, const std::string &txt) 
+    {
+        this->items_icon_paths.push_back(icon);
+        this->items_icon_texts.push_back(txt);
+        this->items_multiselected.push_back(false);
+    }
+
+    void SideMenu::ResetMultiselections() 
+    {
         this->items_multiselected.clear();
         for(u32 i = 0; i < this->items_icon_paths.size(); i++) {
             this->items_multiselected.push_back(false);
         }
     }
 
-    void SideMenu::SetItemMultiselected(const u32 idx, const bool selected) {
+    void SideMenu::SetItemMultiselected(const u32 idx, const bool selected) 
+    {
         if(idx < this->items_multiselected.size()) {
             this->items_multiselected.at(idx) = selected;
         }
     }
 
-    bool SideMenu::IsItemMultiselected(const u32 idx) {
+    bool SideMenu::IsItemMultiselected(const u32 idx) 
+    {
         if(idx < this->items_multiselected.size()) {
             return this->items_multiselected.at(idx);
         }
@@ -352,7 +398,8 @@ namespace ui {
         return false;
     }
 
-    bool SideMenu::IsAnyMultiselected() {
+    bool SideMenu::IsAnyMultiselected() 
+    {
         for(const auto &multiselected: this->items_multiselected) {
             if(multiselected) {
                 return true;
