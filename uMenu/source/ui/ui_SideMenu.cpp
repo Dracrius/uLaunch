@@ -228,10 +228,17 @@ namespace ui {
         }
         else {
             this->prev_selected_item_idx = this->selected_item_idx;
-            this->selected_item_idx = this->items_icon_paths.size();
+
+            this->selected_item_idx = this->items_icon_paths.size() - 1;
+            this->base_icon_idx = this->selected_item_idx - 2;
+
             this->rendered_icons.clear();
-            this->move_alpha = 0xFF;
+            this->rendered_texts.clear();
+
+            MoveReloadIcons(false);
+
             this->UpdateBorderIcons();
+
             this->DoOnSelectionChanged();
         }
         pu::audio::PlaySfx(this->title_select_sfx); //If i am moving to left or right i want to play the sfx
@@ -254,16 +261,22 @@ namespace ui {
         }
         else {
             prev_selected_item_idx = selected_item_idx;
+
             selected_item_idx = 0;
+
             this->rendered_icons.clear();
-            this->move_alpha = 0xFF;
+            this->rendered_texts.clear();
+
+            MoveReloadIcons(true);
+
             this->UpdateBorderIcons();
+
             this->DoOnSelectionChanged();
         }
         pu::audio::PlaySfx(this->title_select_sfx); //If i am moving to left or right i want to play the sfx
     }
 
-    //Check if next to the left is the First Icon
+    //Check if the next Icon to the left is the First Icon Showing
     bool SideMenu::IsLeftFirst() 
     {
         auto base_x = GetProcessedX();
@@ -278,10 +291,11 @@ namespace ui {
         return false;
     }
     
-    //Check if next to the right is the Last Icon
+    //Check if next Icon to the right is the Last Icon Showing
     bool SideMenu::IsRightLast() 
     {
-        if(this->selected_item_idx == (this->items_icon_paths.size() - 1)) {
+        if(this->selected_item_idx == (this->items_icon_paths.size() - 1)) 
+        {
             return true;
         }
 
@@ -306,16 +320,32 @@ namespace ui {
             auto text_tex = pu::ui::render::RenderText(this->text_font, this->items_icon_texts.at(this->selected_item_idx), this->text_clr);
             this->rendered_texts.push_back(text_tex);
 
-            if(this->rendered_icons.size() > ItemCount) {
+            if(this->rendered_icons.size() > ItemCount) 
+            {
                 pu::ui::render::DeleteTexture(this->rendered_icons.front());
                 this->rendered_icons.erase(this->rendered_icons.begin());
                 pu::ui::render::DeleteTexture(this->rendered_texts.front());
                 this->rendered_texts.erase(this->rendered_texts.begin());
+
                 this->base_icon_idx++;
                 if (this->base_icon_idx > this->items_icon_paths.size()) {
                     this->base_icon_idx = 0;
                 }
             }
+            else if (this->rendered_icons.size() < ItemCount)
+            {
+                for (u32 i = 1; i < ItemCount; i++)
+                {
+                    auto icon_tex = pu::ui::render::LoadImage(this->items_icon_paths.at(i));
+                    this->rendered_icons.push_back(icon_tex);
+
+                    auto text_tex = pu::ui::render::RenderText(this->text_font, this->items_icon_texts.at(i), this->text_clr);
+                    this->rendered_texts.push_back(text_tex);
+                }
+
+                this->base_icon_idx = 0;
+            }
+
         }
         else { //Moving Left
             auto icon_tex = pu::ui::render::LoadImage(this->items_icon_paths.at(this->selected_item_idx));
@@ -328,15 +358,31 @@ namespace ui {
             }
             this->rendered_texts.insert(this->rendered_texts.begin(), text_tex);
 
-            this->base_icon_idx--;
-            if (this->base_icon_idx < 0) {
-                this->base_icon_idx = this->items_icon_paths.size();
-            }
             if(this->rendered_icons.size() > ItemCount) {
                 pu::ui::render::DeleteTexture(this->rendered_icons.back());
                 this->rendered_icons.pop_back();
                 pu::ui::render::DeleteTexture(this->rendered_texts.back());
                 this->rendered_texts.pop_back();
+            }
+            else if (this->rendered_icons.size() < ItemCount)
+            {
+                for (u32 i = 1; i < ItemCount; i++)
+                {
+                    auto icon_tex = pu::ui::render::LoadImage(this->items_icon_paths.at(this->items_icon_paths.size() - (i+1)));
+                    this->rendered_icons.insert(this->rendered_icons.begin(), icon_tex);
+
+                    const auto text = this->items_icon_texts.at(this->items_icon_paths.size() - (i + 1));
+                    pu::sdl2::Texture text_tex = nullptr;
+                    if (!text.empty()) {
+                        text_tex = pu::ui::render::RenderText(this->text_font, text, this->text_clr);
+                    }
+                    this->rendered_texts.insert(this->rendered_texts.begin(), text_tex);
+                }
+            }
+
+            this->base_icon_idx--;
+            if (this->base_icon_idx < 0) {
+                this->base_icon_idx = this->items_icon_paths.size();
             }
         }
         this->UpdateBorderIcons();
