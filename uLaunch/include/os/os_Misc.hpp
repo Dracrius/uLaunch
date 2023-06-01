@@ -57,5 +57,5 @@ namespace os {
     u32 GetBatteryLevel();
     bool IsConsoleCharging();
     std::string GetCurrentTime();
-
+    std::string GetCurrent12hTime();
 }

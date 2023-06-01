@@ -89,7 +89,10 @@ namespace cfg {
         HomebrewAppletTakeoverProgramId,
         HomebrewApplicationTakeoverApplicationId,
         ViewerUsbEnabled,
-        ActiveThemeName
+        ActiveThemeName,
+        TimeFormat24hId,
+        LoopingTitlesId,
+        LockscreenId
     };
 
     enum class ConfigEntryType : u8 {
@@ -229,6 +232,39 @@ namespace cfg {
                         return false;
                     }
                 }
+                case ConfigEntryId::TimeFormat24hId: {
+                    if constexpr (std::is_same_v<T, bool>) {
+                        new_entry.header.type = ConfigEntryType::Bool;
+                        new_entry.header.size = sizeof(t);
+                        new_entry.bool_value = t;
+                        break;
+                    }
+                    else {
+                        return false;
+                    }
+                }
+                case ConfigEntryId::LoopingTitlesId: {
+                    if constexpr (std::is_same_v<T, bool>) {
+                        new_entry.header.type = ConfigEntryType::Bool;
+                        new_entry.header.size = sizeof(t);
+                        new_entry.bool_value = t;
+                        break;
+                    }
+                    else {
+                        return false;
+                    }
+                }
+                case ConfigEntryId::LockscreenId: {
+                    if constexpr (std::is_same_v<T, bool>) {
+                        new_entry.header.type = ConfigEntryType::Bool;
+                        new_entry.header.size = sizeof(t);
+                        new_entry.bool_value = t;
+                        break;
+                    }
+                    else {
+                        return false;
+                    }
+                }
                 case ConfigEntryId::ActiveThemeName: {
                     if constexpr(std::is_same_v<T, std::string>) {
                         new_entry.header.type = ConfigEntryType::String;
@@ -289,6 +325,36 @@ namespace cfg {
                     if constexpr(std::is_same_v<T, bool>) {
                         // Disabled by default, it might interfer with other homebrews
                         out_t = false;
+                        return true;
+                    }
+                    else {
+                        return false;
+                    }
+                }
+                case ConfigEntryId::TimeFormat24hId: {
+                    if constexpr (std::is_same_v<T, bool>) {
+                        // Enabled by default to reflect previous behaviour
+                        out_t = true;
+                        return true;
+                    }
+                    else {
+                        return false;
+                    }
+                }
+                case ConfigEntryId::LoopingTitlesId: {
+                    if constexpr (std::is_same_v<T, bool>) {
+                        // Disabled by default to reflect previous behaviour
+                        out_t = false;
+                        return true;
+                    }
+                    else {
+                        return false;
+                    }
+                }
+                case ConfigEntryId::LockscreenId: {
+                    if constexpr (std::is_same_v<T, bool>) {
+                        // Enabled by default to protect your battery life!
+                        out_t = true;
                         return true;
                     }
                     else {

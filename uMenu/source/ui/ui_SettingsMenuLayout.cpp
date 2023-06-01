@@ -96,8 +96,20 @@ namespace ui {
         
         bool viewer_usb_enabled;
         UL_ASSERT_TRUE(g_Config.GetEntry(cfg::ConfigEntryId::ViewerUsbEnabled, viewer_usb_enabled));
-        this->PushSettingItem(GetLanguageString("set_viewer_enabled"), EncodeForSettings(viewer_usb_enabled), 1);
+        this->PushSettingItem(GetLanguageString("set_viewer_enabled"), EncodeForSettings<bool>(viewer_usb_enabled), 1);
         
+        bool time_format_24h = false;
+        UL_ASSERT_TRUE(g_Config.GetEntry(cfg::ConfigEntryId::TimeFormat24hId, time_format_24h));
+        this->PushSettingItem(GetLanguageString("set_24h_time"), EncodeForSettings<bool>(time_format_24h), 11);
+
+        bool looping_titles = false;
+        UL_ASSERT_TRUE(g_Config.GetEntry(cfg::ConfigEntryId::TimeFormat24hId, looping_titles));
+        this->PushSettingItem(GetLanguageString("set_looping_titles"), EncodeForSettings<bool>(looping_titles), 12);
+
+        bool lockscreen = false;
+        UL_ASSERT_TRUE(g_Config.GetEntry(cfg::ConfigEntryId::TimeFormat24hId, lockscreen));
+        this->PushSettingItem(GetLanguageString("set_lockscreen"), EncodeForSettings<bool>(lockscreen), 13);
+
         auto connected_wifi_name = GetLanguageString("set_wifi_none");
         if(net::HasConnection()) {
             net::NetworkProfileData prof_data = {};
@@ -281,6 +293,33 @@ namespace ui {
                 setsysGetNfcEnableFlag(&nfc);
                 setsysSetNfcEnableFlag(!nfc);
 
+                reload_need = true;
+                break;
+            }
+            case 11: {
+                bool time_format_24h = false;
+                UL_ASSERT_TRUE(g_Config.GetEntry(cfg::ConfigEntryId::TimeFormat24hId, time_format_24h));
+
+                time_format_24h = !time_format_24h;
+                UL_ASSERT_TRUE(g_Config.SetEntry(cfg::ConfigEntryId::TimeFormat24hId, time_format_24h));
+                reload_need = true;
+                break;
+            }
+            case 12: {
+                bool looping_titles = false;
+                UL_ASSERT_TRUE(g_Config.GetEntry(cfg::ConfigEntryId::LoopingTitlesId, looping_titles));
+
+                looping_titles = !looping_titles;
+                UL_ASSERT_TRUE(g_Config.SetEntry(cfg::ConfigEntryId::LoopingTitlesId, looping_titles));
+                reload_need = true;
+                break;
+            }
+            case 13: {
+                bool lockscreen = false;
+                UL_ASSERT_TRUE(g_Config.GetEntry(cfg::ConfigEntryId::LockscreenId, lockscreen));
+
+                lockscreen = !lockscreen;
+                UL_ASSERT_TRUE(g_Config.SetEntry(cfg::ConfigEntryId::LockscreenId, lockscreen));
                 reload_need = true;
                 break;
             }

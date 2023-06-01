@@ -39,69 +39,251 @@ namespace ui {
 
     }
 
-    void MenuLayout::DoMoveFolder(const std::string &name) { //This function displays the content of a folder
-        if(this->homebrew_mode) { 
-            if(g_HomebrewRecordList.empty()) { //If i am in homebrew mode and i have no elements i am going to query for my hb.
-                g_HomebrewRecordList = cfg::QueryAllHomebrew();
-            }
+    MenuLayout::MenuLayout(const u8 *captured_screen_buf, const u8 min_alpha) : 
+        last_has_connection(false), 
+        last_battery_lvl(0), 
+        last_is_charging(false), 
+        launch_fail_warn_shown(false), 
+        homebrew_mode(false), 
+        select_on(false), 
+        select_dir(false), 
+        min_alpha(min_alpha), 
+        mode(0), 
+        suspended_screen_alpha(0xFF) 
+    {
+        const auto menu_text_x = g_MenuApplication->GetUIConfigValue<u32>("menu_folder_text_x", 30);
+        const auto menu_text_y = g_MenuApplication->GetUIConfigValue<u32>("menu_folder_text_y", 200);
+        const auto menu_text_size = g_MenuApplication->GetUIConfigValue<u32>("menu_folder_text_size", 25);
+
+        if(captured_screen_buf != nullptr) {
+            this->suspended_screen_img = RawRgbaImage::New(0, 0, captured_screen_buf, 1280, 720, 4);
+            this->Add(this->suspended_screen_img);
+        }
+        else {
+            this->suspended_screen_img = {};
         }
 
-        auto item_list = g_HomebrewRecordList; //Declaring a variable containing a list of items
-        if(!this->homebrew_mode) { //If i am in the main menu (titles) my item list will be the content of that specific folder (of course :D)
-            const auto &folder = cfg::FindFolderByName(g_EntryList, name);
-            item_list = folder.titles;
+        // Load banners first
+        this->top_menu_img = pu::ui::elm::Image::New(40, 35, cfg::GetAssetByTheme(g_Theme, "ui/TopMenu.png"));
+        g_MenuApplication->ApplyConfigForElement("main_menu", "top_menu_bg", this->top_menu_img);
+        this->Add(this->top_menu_img);
+
+        this->banner_img = pu::ui::elm::Image::New(0, 585, cfg::GetAssetByTheme(g_Theme, "ui/BannerInstalled.png"));
+        g_MenuApplication->ApplyConfigForElement("main_menu", "banner_image", this->banner_img);
+        this->Add(this->banner_img);
+
+        // Then load buttons and other UI elements
+        this->logo_img = ClickableImage::New(610, 13 + 35, "romfs:/Logo.png");
+        this->logo_img->SetWidth(60);
+        this->logo_img->SetHeight(60);
+        this->logo_img->SetOnClick(&actions::ShowAboutDialog);
+        g_MenuApplication->ApplyConfigForElement("main_menu", "logo_icon", this->logo_img); // Sorry theme makers... uLaunch's logo must be visible, but can be moved... (ehem you do realize that means they all just move it off screen? So lets just keep things consistant)
+        this->Add(this->logo_img);
+
+        this->connection_icon = pu::ui::elm::Image::New(80, 53, cfg::GetAssetByTheme(g_Theme, "ui/NoConnectionIcon.png"));
+        g_MenuApplication->ApplyConfigForElement("main_menu", "connection_icon", this->connection_icon);
+        this->Add(this->connection_icon);
+
+        this->users_img = ClickableImage::New(270, 53, ""); // On layout creation, no user is still selected...
+        this->users_img->SetOnClick(&actions::ShowUserMenu);
+        g_MenuApplication->ApplyConfigForElement("main_menu", "user_icon", this->users_img);
+        this->Add(this->users_img);
+
+        this->controller_img = ClickableImage::New(340, 53, cfg::GetAssetByTheme(g_Theme, "ui/ControllerIcon.png"));
+        this->controller_img->SetOnClick(&actions::ShowControllerSupport);
+        g_MenuApplication->ApplyConfigForElement("main_menu", "controller_icon", this->controller_img);
+        this->Add(this->controller_img);
+
+        this->time_text = pu::ui::elm::TextBlock::New(515, 65, "...");
+        this->time_text->SetColor(g_MenuApplication->GetTextColor());
+        g_MenuApplication->ApplyConfigForElement("main_menu", "time_text", this->time_text);
+        this->Add(this->time_text);
+
+        this->battery_text = pu::ui::elm::TextBlock::New(700, 55, "...");
+        this->battery_text->SetFont(pu::ui::GetDefaultFont(pu::ui::DefaultFontSize::Medium));
+        this->battery_text->SetColor(g_MenuApplication->GetTextColor());
+        g_MenuApplication->ApplyConfigForElement("main_menu", "battery_text", this->battery_text);
+        this->Add(this->battery_text);
+
+        this->battery_icon = pu::ui::elm::Image::New(700, 80, cfg::GetAssetByTheme(g_Theme, "ui/BatteryNormalIcon.png"));
+        g_MenuApplication->ApplyConfigForElement("main_menu", "battery_icon", this->battery_icon);
+        this->Add(this->battery_icon);
+
+        this->settings_img = ClickableImage::New(810, 53, cfg::GetAssetByTheme(g_Theme, "ui/SettingsIcon.png"));
+        this->settings_img->SetOnClick(&actions::ShowSettingsMenu);
+        g_MenuApplication->ApplyConfigForElement("main_menu", "settings_icon", this->settings_img);
+        this->Add(this->settings_img);
+
+        this->themes_img = ClickableImage::New(880, 53, cfg::GetAssetByTheme(g_Theme, "ui/ThemesIcon.png"));
+        this->themes_img->SetOnClick(&actions::ShowThemesMenu);
+        g_MenuApplication->ApplyConfigForElement("main_menu", "themes_icon", this->themes_img);
+        this->Add(this->themes_img);
+
+        this->fw_text = pu::ui::elm::TextBlock::New(970, 65, g_FwVersion);
+        this->fw_text->SetColor(g_MenuApplication->GetTextColor());
+        g_MenuApplication->ApplyConfigForElement("main_menu", "firmware_text", this->fw_text);
+        this->Add(this->fw_text);
+
+        this->guide_buttons_img = pu::ui::elm::Image::New(540, 120, cfg::GetAssetByTheme(g_Theme, "ui/GuideButtons.png"));
+        g_MenuApplication->ApplyConfigForElement("main_menu", "guide_buttons", this->guide_buttons_img);
+        this->Add(this->guide_buttons_img);
+
+        this->menu_totggle_img = ClickableImage::New(520, 200, cfg::GetAssetByTheme(g_Theme, "ui/ToggleClick.png"));
+        this->menu_totggle_img->SetOnClick(std::bind(&MenuLayout::menuToggle_Click, this));
+        g_MenuApplication->ApplyConfigForElement("main_menu", "menu_toggle_button", this->menu_totggle_img);
+        this->Add(this->menu_totggle_img);
+
+        this->selected_item_name_text = pu::ui::elm::TextBlock::New(40, 610, "...");
+        this->selected_item_name_text->SetFont(pu::ui::GetDefaultFont(pu::ui::DefaultFontSize::Large));
+        this->selected_item_name_text->SetColor(g_MenuApplication->GetTextColor());
+        g_MenuApplication->ApplyConfigForElement("main_menu", "banner_name_text", this->selected_item_name_text);
+        this->Add(this->selected_item_name_text);
+
+        this->selected_item_author_text = pu::ui::elm::TextBlock::New(45, 650, "...");
+        this->selected_item_author_text->SetFont(pu::ui::GetDefaultFont(pu::ui::DefaultFontSize::Medium));
+        this->selected_item_author_text->SetColor(g_MenuApplication->GetTextColor());
+        g_MenuApplication->ApplyConfigForElement("main_menu", "banner_author_text", this->selected_item_author_text);
+        this->Add(this->selected_item_author_text);
+
+        this->selected_item_version_text = pu::ui::elm::TextBlock::New(45, 675, "...");
+        this->selected_item_version_text->SetFont(pu::ui::GetDefaultFont(pu::ui::DefaultFontSize::Medium));
+        this->selected_item_version_text->SetColor(g_MenuApplication->GetTextColor());
+        g_MenuApplication->ApplyConfigForElement("main_menu", "banner_version_text", this->selected_item_version_text);
+        this->Add(this->selected_item_version_text);
+
+        this->items_menu = SideMenu::New(pu::ui::Color(0, 255, 120, 0xFF), cfg::GetAssetByTheme(g_Theme, "ui/Cursor.png"), cfg::GetAssetByTheme(g_Theme, "ui/Suspended.png"), cfg::GetAssetByTheme(g_Theme, "ui/Multiselect.png"), menu_text_x, menu_text_y, pu::ui::MakeDefaultFontName(menu_text_size), g_MenuApplication->GetTextColor(), 294);
+        this->MoveFolder("", false);
+        this->items_menu->SetOnItemSelected(std::bind(&MenuLayout::menu_Click, this, std::placeholders::_1, std::placeholders::_2));
+        this->items_menu->SetOnSelectionChanged(std::bind(&MenuLayout::menu_OnSelected, this, std::placeholders::_1));
+        g_MenuApplication->ApplyConfigForElement("main_menu", "items_menu", this->items_menu, false); // Main menu must be visible, and only Y is customizable here
+        this->Add(this->items_menu);
+
+        this->quick_menu = QuickMenu::New(cfg::GetAssetByTheme(g_Theme, "ui/QuickMenuMain.png"));
+        this->Add(this->quick_menu);
+
+        this->startup_tp = std::chrono::steady_clock::now();
+
+        this->title_launch_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/TitleLaunch.wav"));
+        this->menu_toggle_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/MenuToggle.wav"));
+
+        this->SetBackgroundImage(cfg::GetAssetByTheme(g_Theme, "ui/Background.png"));
+    }
+
+    MenuLayout::~MenuLayout() 
+    {
+        pu::audio::DestroySfx(this->title_launch_sfx);
+        pu::audio::DestroySfx(this->menu_toggle_sfx);
+    }
+
+    void MenuLayout::SetUser(const AccountUid user) {
+        this->users_img->SetImage(os::GetIconCacheImagePath(user));
+        this->users_img->SetWidth(50);
+        this->users_img->SetHeight(50);
+    }
+
+    void MenuLayout::OnMenuInput(const u64 keys_down, const u64 keys_up, const u64 keys_held, const pu::ui::TouchPoint touch_pos) 
+    {
+        const auto quick_menu_on = this->quick_menu->IsOn();
+        this->items_menu->SetEnabled(!quick_menu_on);
+        if(quick_menu_on) {
+            return;
         }
 
-        this->items_menu->ClearItems(); //Graphics operations only...
-        if(this->homebrew_mode) { //In homebrew mode the first element will always be the HBmenu so i am adding the graphics for this element
-            this->items_menu->AddItem(cfg::GetAssetByTheme(g_Theme, "ui/Hbmenu.png"));
+        const auto has_conn = net::HasConnection();
+        if(this->last_has_connection != has_conn) {
+            this->last_has_connection = has_conn;
+            const auto conn_img = has_conn ? "ui/ConnectionIcon.png" : "ui/NoConnectionIcon.png";
+            this->connection_icon->SetImage(cfg::GetAssetByTheme(g_Theme, conn_img));
         }
-        else { //In titles mode i need to distinguish 2 cases
-            if(name.empty()) { //If the folder is empty then i will remove it
-                STL_REMOVE_IF(g_EntryList.folders, folder, folder.titles.empty());
-                for(const auto &folder: g_EntryList.folders) {
-                    this->items_menu->AddItem(cfg::GetAssetByTheme(g_Theme, "ui/Folder.png"), folder.name);
+
+        const auto cur_time = os::GetCurrentTime();
+        this->time_text->SetText(cur_time);
+
+        const auto battery_lvl = os::GetBatteryLevel();
+        if(this->last_battery_lvl != battery_lvl) {
+            this->last_battery_lvl = battery_lvl;
+            const auto battery_str = std::to_string(battery_lvl) + "%";
+            this->battery_text->SetText(battery_str);
+        }
+
+        const auto is_charging = os::IsConsoleCharging();
+        if(this->last_is_charging != is_charging) {
+            this->last_is_charging = is_charging;
+            const auto battery_img = is_charging ? "ui/BatteryChargingIcon.png" : "ui/BatteryNormalIcon.png";
+            this->battery_icon->SetImage(cfg::GetAssetByTheme(g_Theme, battery_img));
+        }
+
+        const auto now_tp = std::chrono::steady_clock::now();
+        if(std::chrono::duration_cast<std::chrono::milliseconds>(now_tp - this->startup_tp).count() >= 1000) {
+            if(!this->launch_fail_warn_shown) {
+                if(g_MenuApplication->LaunchFailed()) {
+                    g_MenuApplication->CreateShowDialog(GetLanguageString("app_launch"), GetLanguageString("app_unexpected_error"), { GetLanguageString("ok") }, true);
                 }
+                this->launch_fail_warn_shown = true;
             }
         }
 
-        u32 tmp_idx = 0;
-        for(const auto &item: item_list) {
-            auto set_susp = false;
-            if(item.title_type == cfg::TitleType::Installed) {
-                if(g_MenuApplication->IsTitleSuspended()) {
-                    if(g_MenuApplication->GetSuspendedApplicationId() == item.app_id) {
-                        set_susp = true;
+        if(this->suspended_screen_img) {
+            if(this->mode == 0) {
+                if(this->suspended_screen_alpha == this->min_alpha) {
+                    this->suspended_screen_img->SetAlpha(this->suspended_screen_alpha);
+                    this->mode = 1;
+                }
+                else {
+                    this->suspended_screen_img->SetAlpha(this->suspended_screen_alpha);
+                    this->suspended_screen_alpha -= SuspendedScreenAlphaIncrement;
+                    if(this->suspended_screen_alpha < this->min_alpha) {
+                        this->suspended_screen_alpha = this->min_alpha;
+                    }
+                    else {
+                        this->ApplySuspendedRatio(false);
                     }
                 }
             }
-            else {
-                if(g_MenuApplication->IsHomebrewSuspended()) {
-                    if(g_MenuApplication->EqualsSuspendedHomebrewPath(item.nro_target.nro_path)) {
-                        set_susp = true;
+            else if(this->mode == 2) {
+                if(this->suspended_screen_alpha == 0xFF) {
+                    this->suspended_screen_img->SetAlpha(this->suspended_screen_alpha);
+
+                    UL_RC_ASSERT(dmi::menu::SendCommand(dmi::DaemonMessage::ResumeApplication, [&](dmi::menu::MenuScopedStorageWriter &writer) {
+                        // ...
+                        return ResultSuccess;
+                    },
+                    [&](dmi::menu::MenuScopedStorageReader &reader) {
+                        // ...
+                        return ResultSuccess;
+                    }));
+                }
+                else {
+                    this->suspended_screen_img->SetAlpha(this->suspended_screen_alpha);
+                    this->suspended_screen_alpha += SuspendedScreenAlphaIncrement;
+                    if(this->suspended_screen_alpha > 0xFF) {
+                        this->suspended_screen_alpha = 0xFF;
+                    }
+                    else {
+                        this->ApplySuspendedRatio(true);
                     }
                 }
             }
-            this->items_menu->AddItem(cfg::GetRecordIconPath(item));
-            if(set_susp) {
-                u32 susp_idx = tmp_idx;
-                // Skip initial item if homebrew mode
-                if(this->homebrew_mode) {
-                    susp_idx++;
-                }
-                // Ignore front folders from main menu
-                else if(name.empty()) {
-                    susp_idx += g_EntryList.folders.size();
-                }
-                this->items_menu->SetSuspendedItem(susp_idx);
-            }
-            tmp_idx++;
         }
 
-        this->items_menu->UpdateBorderIcons();
-        if(!this->homebrew_mode) {
-            this->cur_folder = name;
+        if(keys_down & HidNpadButton_B) {
+            if(!this->cur_folder.empty() && !this->homebrew_mode) {
+                this->MoveFolder("", true);
+            }
         }
+        else if((keys_down & HidNpadButton_L) || (keys_down & HidNpadButton_R) || (keys_down & HidNpadButton_Up) || (keys_down & HidNpadButton_Down)) {
+            this->menuToggle_Click();
+        }
+    }
+
+    void MenuLayout::menuToggle_Click() {
+        pu::audio::PlaySfx(this->menu_toggle_sfx);
+        this->homebrew_mode = !this->homebrew_mode;
+        if(this->select_on) {
+            g_MenuApplication->ShowNotification(GetLanguageString("menu_multiselect_cancel"));
+            this->StopMultiselect();
+        }
+        this->MoveFolder("", true);
     }
 
     void MenuLayout::menu_Click(const u64 keys_down, const u32 idx) { //This function handles the menu options when selecting one or more titles
@@ -450,130 +632,6 @@ namespace ui {
         }
     }
 
-    MenuLayout::MenuLayout(const u8 *captured_screen_buf, const u8 min_alpha) : last_has_connection(false), last_battery_lvl(0), last_is_charging(false), launch_fail_warn_shown(false), homebrew_mode(false), select_on(false), select_dir(false), min_alpha(min_alpha), mode(0), suspended_screen_alpha(0xFF) {
-        const auto menu_text_x = g_MenuApplication->GetUIConfigValue<u32>("menu_folder_text_x", 30);
-        const auto menu_text_y = g_MenuApplication->GetUIConfigValue<u32>("menu_folder_text_y", 200);
-        const auto menu_text_size = g_MenuApplication->GetUIConfigValue<u32>("menu_folder_text_size", 25);
-
-        if(captured_screen_buf != nullptr) {
-            this->suspended_screen_img = RawRgbaImage::New(0, 0, captured_screen_buf, 1280, 720, 4);
-            this->Add(this->suspended_screen_img);
-        }
-        else {
-            this->suspended_screen_img = {};
-        }
-
-        // Load banners first
-        this->top_menu_img = pu::ui::elm::Image::New(40, 35, cfg::GetAssetByTheme(g_Theme, "ui/TopMenu.png"));
-        g_MenuApplication->ApplyConfigForElement("main_menu", "top_menu_bg", this->top_menu_img);
-        this->Add(this->top_menu_img);
-
-        this->banner_img = pu::ui::elm::Image::New(0, 585, cfg::GetAssetByTheme(g_Theme, "ui/BannerInstalled.png"));
-        g_MenuApplication->ApplyConfigForElement("main_menu", "banner_image", this->banner_img);
-        this->Add(this->banner_img);
-
-        // Then load buttons and other UI elements
-        this->logo_img = ClickableImage::New(610, 13 + 35, "romfs:/Logo.png");
-        this->logo_img->SetWidth(60);
-        this->logo_img->SetHeight(60);
-        this->logo_img->SetOnClick(&actions::ShowAboutDialog);
-        g_MenuApplication->ApplyConfigForElement("main_menu", "logo_icon", this->logo_img); // Sorry theme makers... uLaunch's logo must be visible, but can be moved... (ehem you do realize that means they all just move it off screen? So lets just keep things consistant)
-        this->Add(this->logo_img);
-
-        this->connection_icon = pu::ui::elm::Image::New(80, 53, cfg::GetAssetByTheme(g_Theme, "ui/NoConnectionIcon.png"));
-        g_MenuApplication->ApplyConfigForElement("main_menu", "connection_icon", this->connection_icon);
-        this->Add(this->connection_icon);
-
-        this->users_img = ClickableImage::New(270, 53, ""); // On layout creation, no user is still selected...
-        this->users_img->SetOnClick(&actions::ShowUserMenu);
-        g_MenuApplication->ApplyConfigForElement("main_menu", "user_icon", this->users_img);
-        this->Add(this->users_img);
-
-        this->controller_img = ClickableImage::New(340, 53, cfg::GetAssetByTheme(g_Theme, "ui/ControllerIcon.png"));
-        this->controller_img->SetOnClick(&actions::ShowControllerSupport);
-        g_MenuApplication->ApplyConfigForElement("main_menu", "controller_icon", this->controller_img);
-        this->Add(this->controller_img);
-
-        this->time_text = pu::ui::elm::TextBlock::New(515, 65, "...");
-        this->time_text->SetColor(g_MenuApplication->GetTextColor());
-        g_MenuApplication->ApplyConfigForElement("main_menu", "time_text", this->time_text);
-        this->Add(this->time_text);
-
-        this->battery_text = pu::ui::elm::TextBlock::New(700, 55, "...");
-        this->battery_text->SetFont(pu::ui::GetDefaultFont(pu::ui::DefaultFontSize::Medium));
-        this->battery_text->SetColor(g_MenuApplication->GetTextColor());
-        g_MenuApplication->ApplyConfigForElement("main_menu", "battery_text", this->battery_text);
-        this->Add(this->battery_text);
-
-        this->battery_icon = pu::ui::elm::Image::New(700, 80, cfg::GetAssetByTheme(g_Theme, "ui/BatteryNormalIcon.png"));
-        g_MenuApplication->ApplyConfigForElement("main_menu", "battery_icon", this->battery_icon);
-        this->Add(this->battery_icon);
-
-        this->settings_img = ClickableImage::New(810, 53, cfg::GetAssetByTheme(g_Theme, "ui/SettingsIcon.png"));
-        this->settings_img->SetOnClick(&actions::ShowSettingsMenu);
-        g_MenuApplication->ApplyConfigForElement("main_menu", "settings_icon", this->settings_img);
-        this->Add(this->settings_img);
-
-        this->themes_img = ClickableImage::New(880, 53, cfg::GetAssetByTheme(g_Theme, "ui/ThemesIcon.png"));
-        this->themes_img->SetOnClick(&actions::ShowThemesMenu);
-        g_MenuApplication->ApplyConfigForElement("main_menu", "themes_icon", this->themes_img);
-        this->Add(this->themes_img);
-
-        this->fw_text = pu::ui::elm::TextBlock::New(970, 65, g_FwVersion);
-        this->fw_text->SetColor(g_MenuApplication->GetTextColor());
-        g_MenuApplication->ApplyConfigForElement("main_menu", "firmware_text", this->fw_text);
-        this->Add(this->fw_text);
-
-        this->guide_buttons_img = pu::ui::elm::Image::New(540, 120, cfg::GetAssetByTheme(g_Theme, "ui/GuideButtons.png"));
-        g_MenuApplication->ApplyConfigForElement("main_menu", "guide_buttons", this->guide_buttons_img);
-        this->Add(this->guide_buttons_img);
-
-        this->menu_totggle_img = ClickableImage::New(520, 200, cfg::GetAssetByTheme(g_Theme, "ui/ToggleClick.png"));
-        this->menu_totggle_img->SetOnClick(std::bind(&MenuLayout::menuToggle_Click, this));
-        g_MenuApplication->ApplyConfigForElement("main_menu", "menu_toggle_button", this->menu_totggle_img);
-        this->Add(this->menu_totggle_img);
-
-        this->selected_item_name_text = pu::ui::elm::TextBlock::New(40, 610, "...");
-        this->selected_item_name_text->SetFont(pu::ui::GetDefaultFont(pu::ui::DefaultFontSize::Large));
-        this->selected_item_name_text->SetColor(g_MenuApplication->GetTextColor());
-        g_MenuApplication->ApplyConfigForElement("main_menu", "banner_name_text", this->selected_item_name_text);
-        this->Add(this->selected_item_name_text);
-
-        this->selected_item_author_text = pu::ui::elm::TextBlock::New(45, 650, "...");
-        this->selected_item_author_text->SetFont(pu::ui::GetDefaultFont(pu::ui::DefaultFontSize::Medium));
-        this->selected_item_author_text->SetColor(g_MenuApplication->GetTextColor());
-        g_MenuApplication->ApplyConfigForElement("main_menu", "banner_author_text", this->selected_item_author_text);
-        this->Add(this->selected_item_author_text);
-
-        this->selected_item_version_text = pu::ui::elm::TextBlock::New(45, 675, "...");
-        this->selected_item_version_text->SetFont(pu::ui::GetDefaultFont(pu::ui::DefaultFontSize::Medium));
-        this->selected_item_version_text->SetColor(g_MenuApplication->GetTextColor());
-        g_MenuApplication->ApplyConfigForElement("main_menu", "banner_version_text", this->selected_item_version_text);
-        this->Add(this->selected_item_version_text);
-
-        this->items_menu = SideMenu::New(pu::ui::Color(0, 255, 120, 0xFF), cfg::GetAssetByTheme(g_Theme, "ui/Cursor.png"), cfg::GetAssetByTheme(g_Theme, "ui/Suspended.png"), cfg::GetAssetByTheme(g_Theme, "ui/Multiselect.png"), menu_text_x, menu_text_y, pu::ui::MakeDefaultFontName(menu_text_size), g_MenuApplication->GetTextColor(), 294);
-        this->MoveFolder("", false);
-        this->items_menu->SetOnItemSelected(std::bind(&MenuLayout::menu_Click, this, std::placeholders::_1, std::placeholders::_2));
-        this->items_menu->SetOnSelectionChanged(std::bind(&MenuLayout::menu_OnSelected, this, std::placeholders::_1));
-        g_MenuApplication->ApplyConfigForElement("main_menu", "items_menu", this->items_menu, false); // Main menu must be visible, and only Y is customizable here
-        this->Add(this->items_menu);
-
-        this->quick_menu = QuickMenu::New(cfg::GetAssetByTheme(g_Theme, "ui/QuickMenuMain.png"));
-        this->Add(this->quick_menu);
-
-        this->startup_tp = std::chrono::steady_clock::now();
-
-        this->title_launch_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/TitleLaunch.wav"));
-        this->menu_toggle_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/MenuToggle.wav"));
-
-        this->SetBackgroundImage(cfg::GetAssetByTheme(g_Theme, "ui/Background.png"));
-    }
-
-    MenuLayout::~MenuLayout() {
-        pu::audio::DestroySfx(this->title_launch_sfx);
-        pu::audio::DestroySfx(this->menu_toggle_sfx);
-    }
-
     void MenuLayout::menu_OnSelected(const u32 idx) {
         this->selected_item_author_text->SetVisible(true);
         this->selected_item_version_text->SetVisible(true);
@@ -670,100 +728,6 @@ namespace ui {
         }
     }
 
-    void MenuLayout::OnMenuInput(const u64 keys_down, const u64 keys_up, const u64 keys_held, const pu::ui::TouchPoint touch_pos) {
-        const auto quick_menu_on = this->quick_menu->IsOn();
-        this->items_menu->SetEnabled(!quick_menu_on);
-        if(quick_menu_on) {
-            return;
-        }
-
-        const auto has_conn = net::HasConnection();
-        if(this->last_has_connection != has_conn) {
-            this->last_has_connection = has_conn;
-            const auto conn_img = has_conn ? "ui/ConnectionIcon.png" : "ui/NoConnectionIcon.png";
-            this->connection_icon->SetImage(cfg::GetAssetByTheme(g_Theme, conn_img));
-        }
-
-        const auto cur_time = os::GetCurrentTime();
-        this->time_text->SetText(cur_time);
-
-        const auto battery_lvl = os::GetBatteryLevel();
-        if(this->last_battery_lvl != battery_lvl) {
-            this->last_battery_lvl = battery_lvl;
-            const auto battery_str = std::to_string(battery_lvl) + "%";
-            this->battery_text->SetText(battery_str);
-        }
-
-        const auto is_charging = os::IsConsoleCharging();
-        if(this->last_is_charging != is_charging) {
-            this->last_is_charging = is_charging;
-            const auto battery_img = is_charging ? "ui/BatteryChargingIcon.png" : "ui/BatteryNormalIcon.png";
-            this->battery_icon->SetImage(cfg::GetAssetByTheme(g_Theme, battery_img));
-        }
-
-        const auto now_tp = std::chrono::steady_clock::now();
-        if(std::chrono::duration_cast<std::chrono::milliseconds>(now_tp - this->startup_tp).count() >= 1000) {
-            if(!this->launch_fail_warn_shown) {
-                if(g_MenuApplication->LaunchFailed()) {
-                    g_MenuApplication->CreateShowDialog(GetLanguageString("app_launch"), GetLanguageString("app_unexpected_error"), { GetLanguageString("ok") }, true);
-                }
-                this->launch_fail_warn_shown = true;
-            }
-        }
-
-        if(this->suspended_screen_img) {
-            if(this->mode == 0) {
-                if(this->suspended_screen_alpha == this->min_alpha) {
-                    this->suspended_screen_img->SetAlpha(this->suspended_screen_alpha);
-                    this->mode = 1;
-                }
-                else {
-                    this->suspended_screen_img->SetAlpha(this->suspended_screen_alpha);
-                    this->suspended_screen_alpha -= SuspendedScreenAlphaIncrement;
-                    if(this->suspended_screen_alpha < this->min_alpha) {
-                        this->suspended_screen_alpha = this->min_alpha;
-                    }
-                    else {
-                        this->ApplySuspendedRatio(false);
-                    }
-                }
-            }
-            else if(this->mode == 2) {
-                if(this->suspended_screen_alpha == 0xFF) {
-                    this->suspended_screen_img->SetAlpha(this->suspended_screen_alpha);
-
-                    UL_RC_ASSERT(dmi::menu::SendCommand(dmi::DaemonMessage::ResumeApplication, [&](dmi::menu::MenuScopedStorageWriter &writer) {
-                        // ...
-                        return ResultSuccess;
-                    },
-                    [&](dmi::menu::MenuScopedStorageReader &reader) {
-                        // ...
-                        return ResultSuccess;
-                    }));
-                }
-                else {
-                    this->suspended_screen_img->SetAlpha(this->suspended_screen_alpha);
-                    this->suspended_screen_alpha += SuspendedScreenAlphaIncrement;
-                    if(this->suspended_screen_alpha > 0xFF) {
-                        this->suspended_screen_alpha = 0xFF;
-                    }
-                    else {
-                        this->ApplySuspendedRatio(true);
-                    }
-                }
-            }
-        }
-
-        if(keys_down & HidNpadButton_B) {
-            if(!this->cur_folder.empty() && !this->homebrew_mode) {
-                this->MoveFolder("", true);
-            }
-        }
-        else if((keys_down & HidNpadButton_L) || (keys_down & HidNpadButton_R) || (keys_down & HidNpadButton_Up) || (keys_down & HidNpadButton_Down)) {
-            this->menuToggle_Click();
-        }
-    }
-
     bool MenuLayout::OnHomeButtonPress() {
         if(g_MenuApplication->IsSuspended()) {
             if(this->mode == 1) {
@@ -791,20 +755,69 @@ namespace ui {
         }
     }
 
-    void MenuLayout::SetUser(const AccountUid user) {
-        this->users_img->SetImage(os::GetIconCacheImagePath(user));
-        this->users_img->SetWidth(50);
-        this->users_img->SetHeight(50);
-    }
-
-    void MenuLayout::menuToggle_Click() {
-        pu::audio::PlaySfx(this->menu_toggle_sfx);
-        this->homebrew_mode = !this->homebrew_mode;
-        if(this->select_on) {
-            g_MenuApplication->ShowNotification(GetLanguageString("menu_multiselect_cancel"));
-            this->StopMultiselect();
+    void MenuLayout::DoMoveFolder(const std::string &name) { //This function displays the content of a folder
+        if(this->homebrew_mode) { 
+            if(g_HomebrewRecordList.empty()) { //If i am in homebrew mode and i have no elements i am going to query for my hb.
+                g_HomebrewRecordList = cfg::QueryAllHomebrew();
+            }
         }
-        this->MoveFolder("", true);
+
+        auto item_list = g_HomebrewRecordList; //Declaring a variable containing a list of items
+        if(!this->homebrew_mode) { //If i am in the main menu (titles) my item list will be the content of that specific folder (of course :D)
+            const auto &folder = cfg::FindFolderByName(g_EntryList, name);
+            item_list = folder.titles;
+        }
+
+        this->items_menu->ClearItems(); //Graphics operations only...
+        if(this->homebrew_mode) { //In homebrew mode the first element will always be the HBmenu so i am adding the graphics for this element
+            this->items_menu->AddItem(cfg::GetAssetByTheme(g_Theme, "ui/Hbmenu.png"));
+        }
+        else { //In titles mode i need to distinguish 2 cases
+            if(name.empty()) { //If the folder is empty then i will remove it
+                STL_REMOVE_IF(g_EntryList.folders, folder, folder.titles.empty());
+                for(const auto &folder: g_EntryList.folders) {
+                    this->items_menu->AddItem(cfg::GetAssetByTheme(g_Theme, "ui/Folder.png"), folder.name);
+                }
+            }
+        }
+
+        u32 tmp_idx = 0;
+        for(const auto &item: item_list) {
+            auto set_susp = false;
+            if(item.title_type == cfg::TitleType::Installed) {
+                if(g_MenuApplication->IsTitleSuspended()) {
+                    if(g_MenuApplication->GetSuspendedApplicationId() == item.app_id) {
+                        set_susp = true;
+                    }
+                }
+            }
+            else {
+                if(g_MenuApplication->IsHomebrewSuspended()) {
+                    if(g_MenuApplication->EqualsSuspendedHomebrewPath(item.nro_target.nro_path)) {
+                        set_susp = true;
+                    }
+                }
+            }
+            this->items_menu->AddItem(cfg::GetRecordIconPath(item));
+            if(set_susp) {
+                u32 susp_idx = tmp_idx;
+                // Skip initial item if homebrew mode
+                if(this->homebrew_mode) {
+                    susp_idx++;
+                }
+                // Ignore front folders from main menu
+                else if(name.empty()) {
+                    susp_idx += g_EntryList.folders.size();
+                }
+                this->items_menu->SetSuspendedItem(susp_idx);
+            }
+            tmp_idx++;
+        }
+
+        this->items_menu->UpdateBorderIcons();
+        if(!this->homebrew_mode) {
+            this->cur_folder = name;
+        }
     }
 
     void MenuLayout::HandleCloseSuspended() {
