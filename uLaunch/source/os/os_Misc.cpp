@@ -36,7 +36,7 @@ namespace os {
         char str[0x1C] = {};
         if (h < 12)
         {
-            sprintf(str, "%02d:%02d am", h, min);
+            sprintf(str, "%2d:%02d am", h, min);
         }
         else
         {
@@ -44,7 +44,7 @@ namespace os {
             {
                 h = h - 12;
             }
-            sprintf(str, "%02d:%02d pm", h, min);
+            sprintf(str, "%2d:%02d pm", h, min);
         }
         return str;
     }

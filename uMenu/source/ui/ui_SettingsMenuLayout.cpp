@@ -98,16 +98,16 @@ namespace ui {
         UL_ASSERT_TRUE(g_Config.GetEntry(cfg::ConfigEntryId::ViewerUsbEnabled, viewer_usb_enabled));
         this->PushSettingItem(GetLanguageString("set_viewer_enabled"), EncodeForSettings<bool>(viewer_usb_enabled), 1);
         
-        bool time_format_24h = false;
+        bool time_format_24h;
         UL_ASSERT_TRUE(g_Config.GetEntry(cfg::ConfigEntryId::TimeFormat24hId, time_format_24h));
         this->PushSettingItem(GetLanguageString("set_24h_time"), EncodeForSettings<bool>(time_format_24h), 11);
 
-        bool looping_titles = false;
-        UL_ASSERT_TRUE(g_Config.GetEntry(cfg::ConfigEntryId::TimeFormat24hId, looping_titles));
+        bool looping_titles;
+        UL_ASSERT_TRUE(g_Config.GetEntry(cfg::ConfigEntryId::LoopingTitlesId, looping_titles));
         this->PushSettingItem(GetLanguageString("set_looping_titles"), EncodeForSettings<bool>(looping_titles), 12);
 
-        bool lockscreen = false;
-        UL_ASSERT_TRUE(g_Config.GetEntry(cfg::ConfigEntryId::TimeFormat24hId, lockscreen));
+        bool lockscreen;
+        UL_ASSERT_TRUE(g_Config.GetEntry(cfg::ConfigEntryId::LockscreenId, lockscreen));
         this->PushSettingItem(GetLanguageString("set_lockscreen"), EncodeForSettings<bool>(lockscreen), 13);
 
         auto connected_wifi_name = GetLanguageString("set_wifi_none");
@@ -297,7 +297,7 @@ namespace ui {
                 break;
             }
             case 11: {
-                bool time_format_24h = false;
+                bool time_format_24h;
                 UL_ASSERT_TRUE(g_Config.GetEntry(cfg::ConfigEntryId::TimeFormat24hId, time_format_24h));
 
                 time_format_24h = !time_format_24h;
@@ -306,7 +306,7 @@ namespace ui {
                 break;
             }
             case 12: {
-                bool looping_titles = false;
+                bool looping_titles;
                 UL_ASSERT_TRUE(g_Config.GetEntry(cfg::ConfigEntryId::LoopingTitlesId, looping_titles));
 
                 looping_titles = !looping_titles;
@@ -315,7 +315,7 @@ namespace ui {
                 break;
             }
             case 13: {
-                bool lockscreen = false;
+                bool lockscreen;
                 UL_ASSERT_TRUE(g_Config.GetEntry(cfg::ConfigEntryId::LockscreenId, lockscreen));
 
                 lockscreen = !lockscreen;

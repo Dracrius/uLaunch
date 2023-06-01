@@ -22,13 +22,16 @@ namespace ui {
         text_font(font_name), 
         scroll_flag(0), 
         scroll_tp_value(50), 
-        scroll_count(0) 
+        scroll_count(0),
+        looping_enabled(false)
     {
         this->cursor_icon = pu::ui::render::LoadImage(cursor_path);
         this->suspended_icon = pu::ui::render::LoadImage(suspended_img_path);
         this->multiselect_icon = pu::ui::render::LoadImage(multiselect_img_path);
         this->SetY(y);
         this->title_select_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/TitleSelect.wav"));
+
+        g_Config.GetEntry(cfg::ConfigEntryId::LoopingTitlesId, looping_enabled);
     }
 
     SideMenu::~SideMenu() 
@@ -226,7 +229,8 @@ namespace ui {
 
             this->DoOnSelectionChanged();
         }
-        else {
+        else if (g_Config.GetEntry(cfg::ConfigEntryId::LoopingTitlesId, looping_enabled) && looping_enabled)
+        {
             this->prev_selected_item_idx = this->selected_item_idx;
 
             this->selected_item_idx = this->items_icon_paths.size() - 1;
@@ -259,7 +263,8 @@ namespace ui {
 
             this->DoOnSelectionChanged();
         }
-        else {
+        else if(g_Config.GetEntry(cfg::ConfigEntryId::LoopingTitlesId, looping_enabled) && looping_enabled)
+        {
             prev_selected_item_idx = selected_item_idx;
 
             selected_item_idx = 0;

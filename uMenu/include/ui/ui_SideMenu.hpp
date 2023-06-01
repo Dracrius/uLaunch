@@ -53,6 +53,7 @@ namespace ui {
             u32 scroll_tp_value;
             u32 scroll_count;
             pu::audio::Sfx title_select_sfx; //When scrolling titles
+            bool looping_enabled;
 
             inline void DoOnItemSelected(const u64 keys) {
                 if(this->on_select_cb) {

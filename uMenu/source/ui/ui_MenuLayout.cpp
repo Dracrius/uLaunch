@@ -196,8 +196,18 @@ namespace ui {
             this->connection_icon->SetImage(cfg::GetAssetByTheme(g_Theme, conn_img));
         }
 
-        const auto cur_time = os::GetCurrentTime();
-        this->time_text->SetText(cur_time);
+        bool time_24;
+        g_Config.GetEntry(cfg::ConfigEntryId::TimeFormat24hId, time_24);
+        if (time_24)
+        {
+            const auto cur_time = os::GetCurrentTime();
+            this->time_text->SetText(cur_time);
+        }
+        else
+        {
+            const auto cur_time = os::GetCurrent12hTime();
+            this->time_text->SetText(cur_time);
+        }
 
         const auto battery_lvl = os::GetBatteryLevel();
         if(this->last_battery_lvl != battery_lvl) {

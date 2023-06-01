@@ -199,6 +199,9 @@ namespace {
                 UpdateOperationMode();
                 break;
             }
+            case os::AppletMessage::BackFromSleep: {
+
+            }
             default:
                 break;
         }
