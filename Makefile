@@ -43,10 +43,14 @@ daemon: base make_daemon
 make_menu:
 	@$(MAKE) -C Plutonium/
 	@$(MAKE) -C uMenu/
+	@$(MAKE) -C uLockscreen/
 	@mkdir -p SdOut/ulaunch/bin/uMenu
 	@cp uMenu/uMenu.nso SdOut/ulaunch/bin/uMenu/main
 	@cp uMenu/uMenu.npdm SdOut/ulaunch/bin/uMenu/main.npdm
 	@build_romfs uMenu/romfs SdOut/ulaunch/bin/uMenu/romfs.bin
+	@mkdir -p SdOut/ulaunch/bin/uLockscreen
+	@cp uLockscreen/uLockscreen.nso SdOut/ulaunch/bin/uLockscreen/main
+	@cp uLockscreen/uLockscreen.npdm SdOut/ulaunch/bin/uLockscreen/main.npdm
 
 menu: base make_menu
 
@@ -54,4 +58,5 @@ clean:
 	@$(MAKE) clean -C uDaemon/
 	@$(MAKE) clean -C uMenu/
 	@$(MAKE) clean -C uHbTarget/
+	@$(MAKE) clean -C uLockscreen/
 	@rm -rf SdOut/
