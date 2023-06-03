@@ -22,7 +22,7 @@ int main() {
     auto renderer = pu::ui::render::Renderer::New(renderer_opts);
 
     // Create our main application from the renderer
-    auto main = uLockscreen::New(renderer);
+    auto main = ui::uLockscreen::New(renderer);
 
     // Prepare out application. This MUST be called or Show() will exit and nothing will be rendered.
     main->Prepare();
