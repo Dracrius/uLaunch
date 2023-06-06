@@ -36,7 +36,7 @@ using JSON = nlohmann::json;
 #define UL_ASSERTION_LOG_FILE UL_BASE_SD_DIR "/err.log"
 
 #ifndef UL_VERSION
-#error uLaunch's build version isn't defined
+//#error uLaunch's build version isn't defined
 #endif
 
 // Scope utils

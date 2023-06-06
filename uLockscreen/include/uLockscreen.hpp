@@ -2,7 +2,7 @@
 #pragma once
 
 #include <pu/Plutonium>
-//#include <cfg/cfg_Config.hpp>
+#include <cfg/cfg_Config.hpp>
 
 namespace ui {
     // Define your main layout as a class inheriting from pu::Layout

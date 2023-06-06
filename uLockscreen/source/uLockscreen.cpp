@@ -1,39 +1,27 @@
 #include <uLockscreen.hpp>
 #include <ctime>
 
-//extern cfg::Config g_Config;
-//extern cfg::Theme g_Theme;
+extern cfg::Config g_Config;
+extern cfg::Theme g_Theme;
 
 // Implement all the layout/application functions here
 
 namespace ui {
     LockscreenLayout::LockscreenLayout() : Layout::Layout()
     {
-        //pu::ui::Color textColor = { 0xFF, 0xFF, 0xFF, 0xFF };
         pu::ui::Color backgroundColor = { 0, 0, 0, 0xFF };
 
         this->unlockBackground = pu::ui::elm::Rectangle::New(0, 0, 1280, 720, backgroundColor);
         this->Add(this->unlockBackground);
         
-        this->unlockImg = pu::ui::elm::Image::New(501, 283, "ui/UnlockNone.png");
-        //this->unlockImg = pu::ui::elm::Image::New(640, 240, cfg::GetAssetByTheme(g_Theme, "ui/UnlockNone.png"));
+        this->unlockImg = pu::ui::elm::Image::New(640, 240, cfg::GetAssetByTheme(g_Theme, "ui/UnlockNone.png"));
         this->Add(this->unlockImg);
 
-        // Create the TextBlock instance with the text we want
-        /*this->unlockText = pu::ui::elm::TextBlock::New(640, 240, "Press Any Button to Unlock");
-        this->unlockText->SetColor(textColor);
-        this->Add(this->unlockText);*/
-
-        this->default_unlock_sfx = pu::audio::LoadSfx("sound/DefaultUnlock.wav");
-        this->drum_unlock_sfx = pu::audio::LoadSfx("sound/DrumUnlock.wav");
-        this->horn_unlock_sfx = pu::audio::LoadSfx("sound/HornUnlock.wav");
-        this->boing_unlock_sfx = pu::audio::LoadSfx("sound/BoingUnlock.wav");
-        this->owie_unlock_sfx = pu::audio::LoadSfx("sound/OwieUnlock.wav");
-        /*this->default_unlock_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/DefaultUnlock.wav"));
+        this->default_unlock_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/DefaultUnlock.wav"));
         this->drum_unlock_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/DrumUnlock.wav"));
         this->horn_unlock_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/HornUnlock.wav"));
         this->boing_unlock_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/BoingUnlock.wav"));
-        this->owie_unlock_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/OwieUnlock.wav"));*/
+        this->owie_unlock_sfx = pu::audio::LoadSfx(cfg::GetAssetByTheme(g_Theme, "sound/OwieUnlock.wav"));
     }
 
     void uLockscreen::OnLoad() {
@@ -131,20 +119,16 @@ namespace ui {
                 switch (buttonPresses)
                 {
                 case 0:
-                    layout->unlockImg->SetImage("ui/UnlockNone.png");
-                    //this->unlockImg->SetImage(cfg::GetAssetByTheme(g_Theme, "ui/UnlockNone.png"));
+                    layout->unlockImg->SetImage(cfg::GetAssetByTheme(g_Theme, "ui/UnlockNone.png"));
                     break;
                 case 1:
-                    layout->unlockImg->SetImage("ui/UnlockOne.png");
-                    //this->unlockImg->SetImage(cfg::GetAssetByTheme(g_Theme, "ui/UnlockOne.png"));
+                    layout->unlockImg->SetImage(cfg::GetAssetByTheme(g_Theme, "ui/UnlockOne.png"));
                     break;
                 case 2:
-                    layout->unlockImg->SetImage("ui/UnlockTwo.png");
-                    //this->unlockImg->SetImage(cfg::GetAssetByTheme(g_Theme, "ui/UnlockTwo.png"));
+                    layout->unlockImg->SetImage(cfg::GetAssetByTheme(g_Theme, "ui/UnlockTwo.png"));
                     break;
                 case 3:
-                    layout->unlockImg->SetImage("ui/UnlockFull.png");
-                    //this->unlockImg->SetImage(cfg::GetAssetByTheme(g_Theme, "ui/UnlockFull.png"));
+                    layout->unlockImg->SetImage(cfg::GetAssetByTheme(g_Theme, "ui/UnlockFull.png"));
                     break;
                 }
 

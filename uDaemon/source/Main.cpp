@@ -59,6 +59,7 @@ namespace {
     bool g_MenuRestartFlag = false;
     bool g_HbTargetOpenedAsApplication = false;
     bool g_AppletActive = false;
+    bool g_IsLocked = false;
     AppletOperationMode g_OperationMode;
     u8 *g_UsbViewerBuffer = nullptr;
     u8 *g_UsbViewerReadBuffer = nullptr;
@@ -111,21 +112,28 @@ namespace {
         return ecs::RegisterLaunchAsApplet(am::LibraryAppletGetMenuProgramId(), static_cast<u32>(st_mode), "/ulaunch/bin/uMenu", std::addressof(status), sizeof(status));
     }
 
+    inline Result LaunchLockscreen(const dmi::MenuStartMode st_mode, const dmi::DaemonStatus& status) {
+        return ecs::RegisterLaunchAsApplet(am::LibraryAppletGetMenuProgramId(), static_cast<u32>(st_mode), "/ulaunch/bin/uLockscreen", std::addressof(status), sizeof(status));
+    }
+
     void HandleHomeButton() {
-        if(am::LibraryAppletIsActive() && !am::LibraryAppletIsMenu()) {
-            // An applet is opened (which is not our menu), thus close it and reopen the menu
-            am::LibraryAppletTerminate();
-            UL_RC_ASSERT(LaunchMenu(dmi::MenuStartMode::Menu, CreateStatus()));
-        }
-        else if(am::ApplicationIsActive() && am::ApplicationHasForeground()) {
-            // Hide the application currently on focus and open our menu
-            am::HomeMenuSetForeground();
-            UL_RC_ASSERT(LaunchMenu(dmi::MenuStartMode::MenuApplicationSuspended, CreateStatus()));
-        }
-        else if(am::LibraryAppletIsMenu()) {
-            // Send a message to our menu to handle itself the home press
-            std::scoped_lock lk(g_LastMenuMessageLock);
-            g_LastMenuMessage = dmi::MenuMessage::HomeRequest;
+        if (!g_IsLocked)
+        {
+            if (am::LibraryAppletIsActive() && !am::LibraryAppletIsMenu()) {
+                // An applet is opened (which is not our menu), thus close it and reopen the menu
+                am::LibraryAppletTerminate();
+                UL_RC_ASSERT(LaunchMenu(dmi::MenuStartMode::Menu, CreateStatus()));
+            }
+            else if (am::ApplicationIsActive() && am::ApplicationHasForeground()) {
+                // Hide the application currently on focus and open our menu
+                am::HomeMenuSetForeground();
+                UL_RC_ASSERT(LaunchMenu(dmi::MenuStartMode::MenuApplicationSuspended, CreateStatus()));
+            }
+            else if (am::LibraryAppletIsMenu()) {
+                // Send a message to our menu to handle itself the home press
+                std::scoped_lock lk(g_LastMenuMessageLock);
+                g_LastMenuMessage = dmi::MenuMessage::HomeRequest;
+            }
         }
     }
 
@@ -200,7 +208,8 @@ namespace {
                 break;
             }
             case os::AppletMessage::BackFromSleep: {
-
+                g_IsLocked = true;
+                LaunchLockscreen(dmi::MenuStartMode::Menu, CreateStatus());
             }
             default:
                 break;
@@ -229,6 +238,7 @@ namespace {
                     }
                     case dmi::DaemonMessage::TerminateApplication: {
                         // ...
+                        g_IsLocked = false;
                         break;
                     }
                     case dmi::DaemonMessage::LaunchHomebrewLibraryApplet: {
